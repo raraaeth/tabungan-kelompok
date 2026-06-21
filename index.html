@@ -364,74 +364,121 @@ for(let i = data.length - 1; i >= 0; i--){
     }
 
 }
+<script>
 
-const belum = [];
+const TABUNGAN_URL =
+'https://opensheet.elk.sh/1vgp4MkVYRFOqxoojo4mnuYkgX1cxfsUaNleyze9-qYs/tabungan';
 
-peserta.forEach(p => {
+const RIWAYAT_URL =
+'https://opensheet.elk.sh/1vgp4MkVYRFOqxoojo4mnuYkgX1cxfsUaNleyze9-qYs/riwayat';
 
-    const nilai =
-        Number(bulanTerakhir[p] || 0);
-
-    if(nilai === 0){
-
-        belum.push(p);
-
-    }
-
-});
-
-let belumHTML = '';
-
-if(belum.length === 0){
-
-    belumHTML =
-    '<span class="hijau">Semua peserta sudah menabung 🎉</span>';
-
-}else{
-
-    belumHTML = `
-<strong>Bulan ${bulanTerakhir.Bulan}</strong>
-<br><br>
-${belum.length} Orang:
-<br>
-${belum.join(', ')}
-`;
-
+function rupiah(n){
+    return 'Rp' + Number(n).toLocaleString('id-ID');
 }
 
-document.getElementById('belumNabung')
-    .innerHTML = belumHTML;
-});
+Promise.all([
+    fetch(TABUNGAN_URL).then(r => r.json()),
+    fetch(RIWAYAT_URL).then(r => r.json())
+])
+.then(([tabunganData, riwayatData]) => {
 
-fetch(RIWAYAT_URL)
-fetch(RIWAYAT_URL)
-.then(res => res.json())
-.then(data => {
+    const headers = Object.keys(tabunganData[0]);
+    const peserta = headers.filter(h => h !== 'Bulan');
+
+    const totals = {};
+    peserta.forEach(p => totals[p] = 0);
+
+    let grandTotal = 0;
+
+    const thead =
+        document.querySelector('#tabunganTable thead');
 
     const tbody =
-        document.querySelector('#riwayatTable tbody');
+        document.querySelector('#tabunganTable tbody');
 
-    let totalPinjaman = 0;
+    let headRow = '<tr>';
+
+    headers.forEach(h => {
+        headRow += `<th>${h}</th>`;
+    });
+
+    headRow += '<th>Total Bulan</th></tr>';
+
+    thead.innerHTML = headRow;
+
+    tabunganData.forEach(row => {
+
+        let html = '<tr>';
+        let totalBulan = 0;
+
+        headers.forEach(col => {
+
+            let value = row[col];
+
+            if(col === 'Bulan'){
+
+                html += `<td>${value}</td>`;
+
+            }else{
+
+                value = Number(value || 0);
+
+                totals[col] += value;
+                totalBulan += value;
+
+                if(value > 0){
+
+                    html += `
+                    <td class="hijau">
+                        ${rupiah(value)}
+                    </td>
+                    `;
+
+                }else{
+
+                    html += `
+                    <td class="merah">
+                        -
+                    </td>
+                    `;
+
+                }
+
+            }
+
+        });
+
+        grandTotal += totalBulan;
+
+        html += `<td>${rupiah(totalBulan)}</td>`;
+        html += '</tr>';
+
+        tbody.innerHTML += html;
+
+    });
 
     const pinjamanPeserta = {};
+    let totalPinjaman = 0;
 
-    if(data.length){
+    const riwayatBody =
+        document.querySelector('#riwayatTable tbody');
+
+    if(riwayatData.length){
 
         const terakhir =
-            data[data.length - 1];
+            riwayatData[riwayatData.length - 1];
 
-        document.getElementById(
-            'updateTerakhir'
-        ).innerHTML =
-        `<strong>${terakhir.Tanggal}</strong>`;
+        document.getElementById('updateTerakhir')
+            .innerHTML =
+            `<strong>${terakhir.Tanggal}</strong>`;
     }
 
-    data.forEach(item => {
+    riwayatData.forEach(item => {
 
         const nominal =
             Number(item.Bayar);
 
-        tbody.innerHTML += `
+        riwayatBody.innerHTML += `
         <tr>
             <td>${item.Tanggal}</td>
             <td>${item.Nama}</td>
@@ -455,20 +502,76 @@ fetch(RIWAYAT_URL)
             pinjamanPeserta[item.Nama] =
                 (pinjamanPeserta[item.Nama] || 0)
                 + jumlah;
+
         }
 
     });
 
-    document.getElementById(
-        'totalPinjaman'
-    ).innerText =
-    rupiah(totalPinjaman);
+    Object.entries(pinjamanPeserta)
+    .forEach(([nama,jumlah]) => {
+
+        if(totals[nama] !== undefined){
+
+            totals[nama] -= jumlah;
+            grandTotal -= jumlah;
+
+        }
+
+    });
+
+    let totalRow =
+        '<tr class="total-row"><td>TOTAL</td>';
+
+    peserta.forEach(p => {
+
+        totalRow += `
+        <td>${rupiah(totals[p])}</td>
+        `;
+
+    });
+
+    totalRow += `
+    <td>${rupiah(grandTotal)}</td>
+    </tr>
+    `;
+
+    tbody.innerHTML += totalRow;
+
+    document.getElementById('grandTotal')
+        .innerText = rupiah(grandTotal);
+
+    document.getElementById('totalPinjaman')
+        .innerText = rupiah(totalPinjaman);
+
+    const ranking =
+        Object.entries(totals)
+        .sort((a,b)=>b[1]-a[1]);
+
+    const medals = ['🥇','🥈','🥉'];
+
+    let rankingHTML = '';
+
+    ranking.forEach((item,index)=>{
+
+        const icon =
+            medals[index] || (index+1)+'.';
+
+        rankingHTML += `
+        <div class="ranking-item">
+            <span>${icon} ${item[0]}</span>
+            <strong>${rupiah(item[1])}</strong>
+        </div>
+        `;
+
+    });
+
+    document.getElementById('ranking')
+        .innerHTML = rankingHTML;
 
     let htmlPinjaman = '';
 
-    Object.entries(
-        pinjamanPeserta
-    ).forEach(([nama,jumlah]) => {
+    Object.entries(pinjamanPeserta)
+    .forEach(([nama,jumlah]) => {
 
         htmlPinjaman += `
         <div class="ranking-item">
@@ -488,11 +591,68 @@ fetch(RIWAYAT_URL)
 
     }
 
-    document.getElementById(
-        'pesertaPinjaman'
-    ).innerHTML =
-    htmlPinjaman;
+    document.getElementById('pesertaPinjaman')
+        .innerHTML = htmlPinjaman;
+
+    let bulanTerakhir = null;
+
+    for(let i = tabunganData.length - 1; i >= 0; i--){
+
+        const row = tabunganData[i];
+
+        const adaPembayaran =
+            peserta.some(
+                p => Number(row[p] || 0) > 0
+            );
+
+        if(adaPembayaran){
+
+            bulanTerakhir = row;
+            break;
+
+        }
+
+    }
+
+    const belum = [];
+
+    peserta.forEach(p => {
+
+        const nilai =
+            Number(bulanTerakhir[p] || 0);
+
+        if(nilai === 0){
+
+            belum.push(p);
+
+        }
+
+    });
+
+    let belumHTML = '';
+
+    if(belum.length === 0){
+
+        belumHTML =
+        '<span class="hijau">Semua peserta sudah menabung 🎉</span>';
+
+    }else{
+
+        belumHTML = `
+        <strong>Bulan ${bulanTerakhir.Bulan}</strong>
+        <br><br>
+        ${belum.length} Orang:
+        <br>
+        ${belum.join(', ')}
+        `;
+
+    }
+
+    document.getElementById('belumNabung')
+        .innerHTML = belumHTML;
 
 });
+
+</script>
 </script></body>
   </html>
