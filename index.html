@@ -129,6 +129,25 @@ th,td{
     </div>
 
 </div>
+    <div class="card">
+
+    <h2>💳 Total Pinjaman Beredar</h2>
+
+    <div class="total merah" id="totalPinjaman">
+        Rp0
+    </div>
+
+</div>
+
+<div class="card belum-card">
+
+    <h2>⚠️ Peserta Dengan Pinjaman</h2>
+
+    <div id="pesertaPinjaman">
+        Tidak ada pinjaman
+    </div>
+
+</div>
 
 <div class="card update-card">
 
@@ -203,6 +222,8 @@ fetch(TABUNGAN_URL)
 
     const peserta = headers.filter(h => h !== 'Bulan');
 
+   const pinjaman = {};
+    
     const totals = {};
 
     peserta.forEach(p => totals[p] = 0);
@@ -383,36 +404,95 @@ document.getElementById('belumNabung')
 });
 
 fetch(RIWAYAT_URL)
+fetch(RIWAYAT_URL)
 .then(res => res.json())
 .then(data => {
-    if(data.length){
-
-    const terakhir =
-        data[data.length - 1];
-
-    document.getElementById(
-        'updateTerakhir'
-    ).innerHTML =
-    `<strong>${terakhir.Tanggal}</strong>`;
-
-      }
 
     const tbody =
         document.querySelector('#riwayatTable tbody');
 
+    let totalPinjaman = 0;
+
+    const pinjamanPeserta = {};
+
+    if(data.length){
+
+        const terakhir =
+            data[data.length - 1];
+
+        document.getElementById(
+            'updateTerakhir'
+        ).innerHTML =
+        `<strong>${terakhir.Tanggal}</strong>`;
+    }
+
     data.forEach(item => {
+
+        const nominal =
+            Number(item.Bayar);
 
         tbody.innerHTML += `
         <tr>
             <td>${item.Tanggal}</td>
             <td>${item.Nama}</td>
-            <td>${rupiah(item.Bayar)}</td>
+            <td class="${
+                nominal >= 0
+                ? 'hijau'
+                : 'merah'
+            }">
+                ${rupiah(nominal)}
+            </td>
         </tr>
+        `;
+
+        if(nominal < 0){
+
+            const jumlah =
+                Math.abs(nominal);
+
+            totalPinjaman += jumlah;
+
+            pinjamanPeserta[item.Nama] =
+                (pinjamanPeserta[item.Nama] || 0)
+                + jumlah;
+        }
+
+    });
+
+    document.getElementById(
+        'totalPinjaman'
+    ).innerText =
+    rupiah(totalPinjaman);
+
+    let htmlPinjaman = '';
+
+    Object.entries(
+        pinjamanPeserta
+    ).forEach(([nama,jumlah]) => {
+
+        htmlPinjaman += `
+        <div class="ranking-item">
+            <span>${nama}</span>
+            <strong class="merah">
+                ${rupiah(jumlah)}
+            </strong>
+        </div>
         `;
 
     });
 
-});
+    if(htmlPinjaman === ''){
 
+        htmlPinjaman =
+        '<span class="hijau">Tidak ada pinjaman 🎉</span>';
+
+    }
+
+    document.getElementById(
+        'pesertaPinjaman'
+    ).innerHTML =
+    htmlPinjaman;
+
+});
 </script></body>
   </html>
