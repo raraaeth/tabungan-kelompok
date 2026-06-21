@@ -323,8 +323,26 @@ fetch(TABUNGAN_URL)
 
     document.getElementById('ranking')
         .innerHTML = rankingHTML;
-const bulanTerakhir =
-    data[data.length - 1];
+
+    let bulanTerakhir = null;
+
+for(let i = data.length - 1; i >= 0; i--){
+
+    const row = data[i];
+
+    const adaPembayaran =
+        peserta.some(p =>
+            Number(row[p] || 0) > 0
+        );
+
+    if(adaPembayaran){
+
+        bulanTerakhir = row;
+        break;
+
+    }
+
+}
 
 const belum = [];
 
@@ -351,9 +369,12 @@ if(belum.length === 0){
 }else{
 
     belumHTML = `
-    <strong>${belum.length} Orang:</strong><br><br>
-    ${belum.join(', ')}
-    `;
+<strong>Bulan ${bulanTerakhir.Bulan}</strong>
+<br><br>
+${belum.length} Orang:
+<br>
+${belum.join(', ')}
+`;
 
 }
 
