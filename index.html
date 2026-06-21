@@ -1,0 +1,294 @@
+<!DOCTYPE html><html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Tabungan Kelompok</title><style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial,sans-serif;
+    background:#f5f7fb;
+    color:#333;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+    margin-bottom:20px;
+}
+
+h1,h2{
+    text-align:center;
+    margin-bottom:15px;
+}
+
+.total{
+    text-align:center;
+    font-size:36px;
+    font-weight:bold;
+    color:#2e7d32;
+}
+
+.ranking-item{
+    display:flex;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid #eee;
+}
+
+.table-wrapper{
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+}
+
+th{
+    background:#222;
+    color:white;
+}
+
+th,td{
+    padding:10px;
+    border:1px solid #ddd;
+    text-align:center;
+}
+
+.total-row{
+    font-weight:bold;
+    background:#f3f3f3;
+}
+
+.section-title{
+    margin-bottom:15px;
+    text-align:center;
+}
+
+</style></head><body><div class="container"><div class="card">
+
+    <h1>💰 Total Tabungan Terkumpul</h1>
+
+    <div class="total" id="grandTotal">
+        Rp0
+    </div>
+
+</div>
+
+<div class="card">
+
+    <h2>🏆 Perolehan Tabungan</h2>
+
+    <div id="ranking">
+        Loading...
+    </div>
+
+</div>
+
+<div class="card">
+
+    <h2 class="section-title">
+        📋 Tabungan Bulanan
+    </h2>
+
+    <div class="table-wrapper">
+
+        <table id="tabunganTable">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+
+    </div>
+
+</div>
+
+<div class="card">
+
+    <h2 class="section-title">
+        🧾 Riwayat Pembayaran
+    </h2>
+
+    <div class="table-wrapper">
+
+        <table id="riwayatTable">
+
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Nama</th>
+                    <th>Bayar</th>
+                </tr>
+            </thead>
+
+            <tbody></tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</div><script>
+
+const TABUNGAN_URL =
+'https://opensheet.elk.sh/1vgp4MkVYRFOqxoojo4mnuYkgX1cxfsUaNleyze9-qYs/tabungan';
+
+const RIWAYAT_URL =
+'https://opensheet.elk.sh/1vgp4MkVYRFOqxoojo4mnuYkgX1cxfsUaNleyze9-qYs/riwayat';
+
+function rupiah(n){
+    return 'Rp' + Number(n).toLocaleString('id-ID');
+}
+
+fetch(TABUNGAN_URL)
+.then(res => res.json())
+.then(data => {
+
+    const headers = Object.keys(data[0]);
+
+    const peserta = headers.filter(h => h !== 'Bulan');
+
+    const totals = {};
+
+    peserta.forEach(p => totals[p] = 0);
+
+    let grandTotal = 0;
+
+    const thead =
+        document.querySelector('#tabunganTable thead');
+
+    const tbody =
+        document.querySelector('#tabunganTable tbody');
+
+    let headRow = '<tr>';
+
+    headers.forEach(h => {
+
+        headRow += `<th>${h}</th>`;
+
+    });
+
+    headRow += '<th>Total Bulan</th>';
+
+    headRow += '</tr>';
+
+    thead.innerHTML = headRow;
+
+    data.forEach(row => {
+
+        let html = '<tr>';
+
+        let totalBulan = 0;
+
+        headers.forEach(col => {
+
+            let value = row[col];
+
+            if(col !== 'Bulan'){
+
+                value = Number(value || 0);
+
+                totals[col] += value;
+
+                totalBulan += value;
+
+                html += `<td>${value ? rupiah(value) : '-'}</td>`;
+
+            }else{
+
+                html += `<td>${value}</td>`;
+
+            }
+
+        });
+
+        grandTotal += totalBulan;
+
+        html += `<td>${rupiah(totalBulan)}</td>`;
+
+        html += '</tr>';
+
+        tbody.innerHTML += html;
+
+    });
+
+    let totalRow =
+        '<tr class="total-row"><td>TOTAL</td>';
+
+    peserta.forEach(p => {
+
+        totalRow += `<td>${rupiah(totals[p])}</td>`;
+
+    });
+
+    totalRow += `<td>${rupiah(grandTotal)}</td></tr>`;
+
+    tbody.innerHTML += totalRow;
+
+    document.getElementById('grandTotal')
+        .innerText = rupiah(grandTotal);
+
+    const ranking =
+        Object.entries(totals)
+        .sort((a,b) => b[1]-a[1]);
+
+    const medals = ['🥇','🥈','🥉'];
+
+    let rankingHTML = '';
+
+    ranking.forEach((item,index)=>{
+
+        const icon =
+            medals[index] || (index+1)+'.';
+
+        rankingHTML += `
+        <div class="ranking-item">
+            <span>${icon} ${item[0]}</span>
+            <strong>${rupiah(item[1])}</strong>
+        </div>
+        `;
+
+    });
+
+    document.getElementById('ranking')
+        .innerHTML = rankingHTML;
+
+});
+
+fetch(RIWAYAT_URL)
+.then(res => res.json())
+.then(data => {
+
+    const tbody =
+        document.querySelector('#riwayatTable tbody');
+
+    data.forEach(item => {
+
+        tbody.innerHTML += `
+        <tr>
+            <td>${item.Tanggal}</td>
+            <td>${item.Nama}</td>
+            <td>${rupiah(item.Bayar)}</td>
+        </tr>
+        `;
+
+    });
+
+});
+
+</script></body>
+  </html>
