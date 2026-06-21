@@ -79,6 +79,27 @@ th,td{
     text-align:center;
 }
 
+.belum-card{
+    background:#fff3cd;
+    border-left:5px solid #ffc107;
+}
+
+.update-card{
+    background:#e8f5e9;
+    border-left:5px solid #4caf50;
+}
+
+.hijau{
+    color:#2e7d32;
+    font-weight:bold;
+}
+
+.merah{
+    color:#c62828;
+    font-weight:bold;
+}
+
+    
 </style></head><body><div class="container"><div class="card">
 
     <h1>💰 Total Tabungan Terkumpul</h1>
@@ -94,6 +115,26 @@ th,td{
     <h2>🏆 Perolehan Tabungan</h2>
 
     <div id="ranking">
+        Loading...
+    </div>
+
+</div>
+
+    <div class="card belum-card">
+
+    <h2>⚠️ Belum Nabung Bulan Ini</h2>
+
+    <div id="belumNabung">
+        Loading...
+    </div>
+
+</div>
+
+<div class="card update-card">
+
+    <h2>🕒 Update Terakhir</h2>
+
+    <div id="updateTerakhir">
         Loading...
     </div>
 
@@ -206,7 +247,23 @@ fetch(TABUNGAN_URL)
 
                 totalBulan += value;
 
-                html += `<td>${value ? rupiah(value) : '-'}</td>`;
+                if(value > 0){
+
+    html += `
+    <td class="hijau">
+        ${rupiah(value)}
+    </td>
+    `;
+
+}else{
+
+    html += `
+    <td class="merah">
+        -
+    </td>
+    `;
+
+        }
 
             }else{
 
@@ -266,12 +323,58 @@ fetch(TABUNGAN_URL)
 
     document.getElementById('ranking')
         .innerHTML = rankingHTML;
+const bulanTerakhir =
+    data[data.length - 1];
 
+const belum = [];
+
+peserta.forEach(p => {
+
+    const nilai =
+        Number(bulanTerakhir[p] || 0);
+
+    if(nilai === 0){
+
+        belum.push(p);
+
+    }
+
+});
+
+let belumHTML = '';
+
+if(belum.length === 0){
+
+    belumHTML =
+    '<span class="hijau">Semua peserta sudah menabung 🎉</span>';
+
+}else{
+
+    belumHTML = `
+    <strong>${belum.length} Orang:</strong><br><br>
+    ${belum.join(', ')}
+    `;
+
+}
+
+document.getElementById('belumNabung')
+    .innerHTML = belumHTML;
 });
 
 fetch(RIWAYAT_URL)
 .then(res => res.json())
 .then(data => {
+    if(data.length){
+
+    const terakhir =
+        data[data.length - 1];
+
+    document.getElementById(
+        'updateTerakhir'
+    ).innerHTML =
+    `<strong>${terakhir.Tanggal}</strong>`;
+
+      }
 
     const tbody =
         document.querySelector('#riwayatTable tbody');
