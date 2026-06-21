@@ -652,7 +652,13 @@ Promise.all([
         .innerHTML = belumHTML;
 
 });
+    .catch(error => {
 
-</script>
+    console.error(error);
+
+    alert(error);
+
+});
+
 </script></body>
   </html>
